@@ -163,7 +163,7 @@ const sportsArray = [
   },
   {
     displayName: "WATER POLO",
-    logoUrl: "httpss://backend-beryl-seven-78.vercel.app/photos/Water Polo.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Water Polo.jpg",
     name: "water-polo",
     handleDirectResult: true,
     partialSum: 2,
