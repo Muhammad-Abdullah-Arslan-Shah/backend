@@ -312,7 +312,7 @@ async function scrapeMatches(league) {
   const matchesData = [];
 
   try {
-    const response = await fetchWithTimeout(league, {}, 10000); // 10 seconds timeout
+    const response = await fetchWithTimeout(league, {}, 20000); // Increased timeout
     const htmlContent = await response.text();
 
     const eventIDs = [];
@@ -322,63 +322,37 @@ async function scrapeMatches(league) {
 
     while ((match = divPattern.exec(htmlContent)) !== null) {
       const divContent = match[1];
-      const eventIDMatches = divContent.match(
-        /encodeEventId&quot;:&quot;([^&]*)&quot;/g
-      );
+      const eventIDMatches = divContent.match(/encodeEventId&quot;:&quot;([^&]*)&quot;/g);
       const oddsRequestMatches = divContent.match(/:odds-request="({.*?})"/);
 
       if (eventIDMatches) {
         for (const eventIDMatch of eventIDMatches) {
-          const eventID = eventIDMatch.match(
-            /encodeEventId&quot;:&quot;([^&]*)&quot;/
-          )[1];
+          const eventID = eventIDMatch.match(/encodeEventId&quot;:&quot;([^&]*)&quot;/)[1];
           eventIDs.push(eventID);
         }
       }
       if (oddsRequestMatches && oddsRequestMatches.length > 0) {
-        // Extract the matched odds request string
         const oddsRequestString = oddsRequestMatches[1].replace(/&quot;/g, '"');
-        // Validate if the oddsRequestString is valid JSON before parsing
         if (isValidJSON(oddsRequestString)) {
           const oddsRequestObject = JSON.parse(oddsRequestString);
-          // Get the URL from the odds request object
           const oddsRequestEndpoint = oddsRequestObject.url;
+          const oddsRequestURL = "https://www.oddsportal.com" + oddsRequestEndpoint;
+          const responseOdds = await fetchWithRetries(oddsRequestURL, {}, 20000, MAX_RETRIES, RETRY_DELAY);
 
-          const oddsRequestURL =
-            "https://www.oddsportal.com" + oddsRequestEndpoint;
-
-          // Fetch the content from the URL with retries
-          const responseOdds = await fetchWithRetries(
-            oddsRequestURL,
-            {},
-            10000,
-            MAX_RETRIES,
-            RETRY_DELAY
-          );
-
-          // Check if the request was successful
           if (responseOdds.ok) {
             const oddsContent = await responseOdds.text();
-            matchesOdds = JSON.parse(oddsContent); // Define oddsData here
+            matchesOdds = JSON.parse(oddsContent);
           } else {
-            console.error(
-              "Failed to fetch odds data:",
-              responseOdds.status,
-              responseOdds.statusText
-            );
+            console.error("Failed to fetch odds data:", responseOdds.status, responseOdds.statusText);
           }
         } else {
-          console.error(
-            "Invalid JSON in odds request string:",
-            oddsRequestString
-          );
+          console.error("Invalid JSON in odds request string:", oddsRequestString);
         }
       } else {
         console.log("No :odds-request attribute found.");
       }
     }
 
-    // Fetch and process each match concurrently
     await Promise.all(
       eventIDs.map(async (eventID) => {
         const matchData = {};
@@ -387,57 +361,25 @@ async function scrapeMatches(league) {
         matchData.href = href;
 
         try {
-          // Make a GET request to fetch the raw HTML source code of the webpage with retries
-          const response = await fetchWithRetries(
-            href,
-            {},
-            10000,
-            MAX_RETRIES,
-            RETRY_DELAY
-          );
+          const response = await fetchWithRetries(href, {}, 20000, MAX_RETRIES, RETRY_DELAY);
 
           if (!response.ok) {
             throw new Error("Failed to fetch page source");
           }
-          // Extract the HTML content from the response
           const htmlContent = await response.text();
 
-          // Find the index of the start and end of the startDate
-          const startStartDateIndex =
-            htmlContent.indexOf("startDate&quot;:") + "startDate&quot;:".length;
-          const endStartDateIndex = htmlContent.indexOf(
-            ",",
-            startStartDateIndex
-          );
-
-          // Check if the startDate was found
+          const startStartDateIndex = htmlContent.indexOf("startDate&quot;:") + "startDate&quot;:".length;
+          const endStartDateIndex = htmlContent.indexOf(",", startStartDateIndex);
           if (startStartDateIndex !== -1 && endStartDateIndex !== -1) {
-            // Extract the startDate
-            const startDate = htmlContent.slice(
-              startStartDateIndex,
-              endStartDateIndex
-            );
+            const startDate = htmlContent.slice(startStartDateIndex, endStartDateIndex);
             matchData.startDateTimestamp = startDate;
           } else {
             console.log("Could not find startDate");
           }
 
-          // Find the start and end index of the script containing JSON LD data
-          const startScriptIndex =
-            htmlContent.indexOf('<script type="application/ld+json">') +
-            '<script type="application/ld+json">'.length;
-          const endScriptIndex = htmlContent.indexOf(
-            "</script>",
-            startScriptIndex
-          );
-
-          // Extract the JSON LD data
-          const jsonLDContent = htmlContent.slice(
-            startScriptIndex,
-            endScriptIndex
-          );
-
-          // Parse the JSON LD data
+          const startScriptIndex = htmlContent.indexOf('<script type="application/ld+json">') + '<script type="application/ld+json">'.length;
+          const endScriptIndex = htmlContent.indexOf("</script>", startScriptIndex);
+          const jsonLDContent = htmlContent.slice(startScriptIndex, endScriptIndex);
           const eventData = JSON.parse(jsonLDContent);
 
           matchData.homeTeamName = eventData.homeTeam.name;
@@ -450,7 +392,6 @@ async function scrapeMatches(league) {
           console.error("Error fetching page source:", error);
         }
 
-        // Push the match data to the array
         matchesData.push(matchData);
       })
     );
@@ -468,15 +409,14 @@ app.get("/api/scrapeMatches", async (req, res) => {
     if (!league) {
       throw new Error("league parameter is required");
     }
-    //console.time("scrapeMatches");
     const data = await scrapeMatches(league);
-    //console.timeEnd("scrapeMatches");
     res.json(data);
   } catch (error) {
     console.error("Error scraping matches:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 //////////////////////////////////////////////////////////
 
 function extractSportNameFromUrl(url) {
