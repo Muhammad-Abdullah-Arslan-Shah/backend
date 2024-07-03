@@ -274,6 +274,40 @@ app.get("/api/scrapeCountries", async (req, res) => {
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
+// Helper function to validate JSON
+function isValidJSON(str) {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Helper function to perform fetch with retries
+async function fetchWithRetries(url, options, timeout, retries, delay) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fetchWithTimeout(url, options, timeout);
+    } catch (error) {
+      if (i === retries - 1) {
+        throw error;
+      }
+      console.warn(`Retrying fetch... (${i + 1}/${retries})`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
+const fetchWithTimeout = (url, options = {}, timeout = 5000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), timeout)
+    ),
+  ]);
+};
+
 async function scrapeMatches(league) {
   const matchesData = [];
 
@@ -427,40 +461,6 @@ async function scrapeMatches(league) {
     return [];
   }
 }
-
-// Helper function to validate JSON
-function isValidJSON(str) {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-// Helper function to perform fetch with retries
-async function fetchWithRetries(url, options, timeout, retries, delay) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fetchWithTimeout(url, options, timeout);
-    } catch (error) {
-      if (i === retries - 1) {
-        throw error;
-      }
-      console.warn(`Retrying fetch... (${i + 1}/${retries})`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-}
-
-const fetchWithTimeout = (url, options = {}, timeout = 5000) => {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Request timed out")), timeout)
-    ),
-  ]);
-};
 
 app.get("/api/scrapeMatches", async (req, res) => {
   try {
