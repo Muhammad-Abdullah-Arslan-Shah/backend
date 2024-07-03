@@ -11,7 +11,7 @@ app.use("/photos", express.static(path.join(__dirname, "photos")));
 const sportsArray = [
   {
     displayName: "FOOTBALL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/football.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/football.jpg",
     name: "football",
     handleDirectResult: false,
     partialSum: 2,
@@ -19,7 +19,7 @@ const sportsArray = [
   },
   {
     displayName: "BASKETBALL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Basketball.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Basketball.jpg",
     name: "basketball",
     handleDirectResult: false,
     partialSum: 2,
@@ -27,7 +27,7 @@ const sportsArray = [
   },
   {
     displayName: "BASEBALL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Baseball.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Baseball.jpg",
     name: "baseball",
     handleDirectResult: false,
     partialSum: 2,
@@ -35,7 +35,7 @@ const sportsArray = [
   },
   {
     displayName: "HOCKEY",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Hockey.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Hockey.jpg",
     name: "hockey",
     handleDirectResult: true,
     partialSum: 2,
@@ -43,7 +43,7 @@ const sportsArray = [
   },
   {
     displayName: "TENNIS",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Tennis.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Tennis.jpg",
     name: "tennis",
     handleDirectResult: true,
     partialSum: 2,
@@ -51,7 +51,7 @@ const sportsArray = [
   },
   {
     displayName: "AMERICAN FOOTBALL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/American Football.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/American Football.jpg",
     name: "american-football",
     handleDirectResult: true,
     partialSum: 2,
@@ -59,7 +59,7 @@ const sportsArray = [
   },
   {
     displayName: "AUSSIE RULES",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Aussie Rules.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Aussie Rules.jpg",
     name: "aussie-rules",
     handleDirectResult: true,
     partialSum: 2,
@@ -67,7 +67,7 @@ const sportsArray = [
   },
   {
     displayName: "BADMINTON",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/badminton_cleanup.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/badminton_cleanup.jpg",
     name: "badminton",
     handleDirectResult: true,
     partialSum: 2,
@@ -75,7 +75,7 @@ const sportsArray = [
   },
   {
     displayName: "BOXING",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Boxing.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Boxing.jpg",
     name: "boxing",
     handleDirectResult: true,
     partialSum: 2,
@@ -83,7 +83,7 @@ const sportsArray = [
   },
   {
     displayName: "CRICKET",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Cricket.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Cricket.jpg",
     name: "cricket",
     handleDirectResult: true,
     partialSum: 2,
@@ -91,7 +91,7 @@ const sportsArray = [
   },
   {
     displayName: "DARTS",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Darts.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Darts.jpg",
     name: "darts",
     handleDirectResult: true,
     partialSum: 2,
@@ -99,7 +99,7 @@ const sportsArray = [
   },
   {
     displayName: "ESPORTS",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/esports.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/esports.jpg",
     name: "esports",
     handleDirectResult: true,
     partialSum: 2,
@@ -107,7 +107,7 @@ const sportsArray = [
   },
   {
     displayName: "FUTSAL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Futsal.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Futsal.jpg",
     name: "futsal",
     handleDirectResult: true,
     partialSum: 2,
@@ -115,7 +115,7 @@ const sportsArray = [
   },
   {
     displayName: "HANDBALL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Handball.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Handball.jpg",
     name: "handball",
     handleDirectResult: true,
     partialSum: 2,
@@ -123,7 +123,7 @@ const sportsArray = [
   },
   {
     displayName: "MMA",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/MMA.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/MMA.jpg",
     name: "mma",
     handleDirectResult: true,
     partialSum: 2,
@@ -131,7 +131,7 @@ const sportsArray = [
   },
   {
     displayName: "RUGBY LEAGUE",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Rugby League.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Rugby League.jpg",
     name: "rugby-league",
     handleDirectResult: true,
     partialSum: 2,
@@ -139,7 +139,7 @@ const sportsArray = [
   },
   {
     displayName: "RUGBY UNION",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Rugby Union.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Rugby Union.jpg",
     name: "rugby-union",
     handleDirectResult: true,
     partialSum: 2,
@@ -147,7 +147,7 @@ const sportsArray = [
   },
   {
     displayName: "TABLE TENNIS",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/table tennis.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/table tennis.jpg",
     name: "table-tennis",
     handleDirectResult: true,
     partialSum: 2,
@@ -155,7 +155,7 @@ const sportsArray = [
   },
   {
     displayName: "VOLLEYBALL",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Volleyball.jpg",
+    logoUrl: "https://backend-beryl-seven-78.vercel.app/photos/Volleyball.jpg",
     name: "volleyball",
     handleDirectResult: true,
     partialSum: 2,
@@ -163,7 +163,7 @@ const sportsArray = [
   },
   {
     displayName: "WATER POLO",
-    logoUrl: "http://backend-beryl-seven-78.vercel.app/photos/Water Polo.jpg",
+    logoUrl: "httpss://backend-beryl-seven-78.vercel.app/photos/Water Polo.jpg",
     name: "water-polo",
     handleDirectResult: true,
     partialSum: 2,
@@ -204,7 +204,7 @@ app.get("/api/scrapeSports", async (req, res) => {
 //SCRAPE COUNTRIES
 async function scrapeCountries(sport) {
   try {
-    const response = await fetch(`https://www.oddsportal.com/${sport}/`);
+    const response = await fetch(`httpss://www.oddsportal.com/${sport}/`);
     const htmlContent = await response.text();
 
     const countriesWithLeagues = [];
@@ -311,7 +311,7 @@ async function scrapeMatches(league) {
           const oddsRequestEndpoint = oddsRequestObject.url;
 
           const oddsRequestURL =
-            "https://www.oddsportal.com" + oddsRequestEndpoint;
+            "httpss://www.oddsportal.com" + oddsRequestEndpoint;
 
           // Fetch the content from the URL with retries
           const responseOdds = await fetchWithRetries(
