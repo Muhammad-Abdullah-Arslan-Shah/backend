@@ -361,7 +361,7 @@ async function scrapeMatches(league) {
         matchData.href = href;
 
         try {
-          const response = await fetchWithRetries(href, {}, 20000, MAX_RETRIES, RETRY_DELAY);
+          const response = await fetchWithRetries(href, {}, 50000, MAX_RETRIES, RETRY_DELAY);
 
           if (!response.ok) {
             throw new Error("Failed to fetch page source");
