@@ -311,7 +311,7 @@ async function scrapeMatches(league) {
           const oddsRequestEndpoint = oddsRequestObject.url;
 
           const oddsRequestURL =
-            "httpss://www.oddsportal.com" + oddsRequestEndpoint;
+            "https://www.oddsportal.com" + oddsRequestEndpoint;
 
           // Fetch the content from the URL with retries
           const responseOdds = await fetchWithRetries(
