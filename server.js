@@ -7,6 +7,20 @@ const PORT = process.env.PORT || 5000;
 
 // Serve static files from the "photos" directory
 app.use("/photos", express.static(path.join(__dirname, "photos")));
+const allowedOrigins = ["https://sports-perdiction-app.vercel.app"];
+
+// Configure CORS options
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  optionsSuccessStatus: 200,
+};
+
 
 const sportsArray = [
   {
@@ -177,7 +191,7 @@ sportsArray.forEach((sport) => {
   sportsIndex[sport.name] = sport;
 });
 
-app.use(cors());
+app.use(cors(corsOptions));
 
 app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
