@@ -1,12 +1,19 @@
-//server.js
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
+import express from "express";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from 'url';
+import fetch from "node-fetch";
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Resolve __dirname for ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Serve static files from the "photos" directory
 app.use("/photos", express.static(path.join(__dirname, "photos")));
+
 const allowedOrigins = ["https://sports-perdiction-app.vercel.app"];
 
 // Configure CORS options
@@ -20,7 +27,6 @@ const corsOptions = {
   },
   optionsSuccessStatus: 200,
 };
-
 
 const sportsArray = [
   {
@@ -204,16 +210,13 @@ async function scrapeSports() {
 
 app.get("/api/scrapeSports", async (req, res) => {
   try {
-    //console.time("scrapeSports"); // Start the timer
     const data = await scrapeSports();
-    //console.timeEnd("scrapeSports"); // End the timer and log the elapsed time
     res.json(data);
   } catch (error) {
-    console.error("Error scraping OddsPortal:", error);
+    console.error("Error scraping sports:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-//////////////////////////////////////////////////////////
 
 //SCRAPE COUNTRIES
 async function scrapeCountries(sport) {
@@ -222,9 +225,7 @@ async function scrapeCountries(sport) {
     const htmlContent = await response.text();
 
     const countriesWithLeagues = [];
-
-    const spanPattern =
-      /<div class="[^">]*[\s\S]*?<span class="[^">]*">(.*?)<\/span>/gs;
+    const spanPattern = /<div class="[^">]*[\s\S]*?<span class="[^">]*">(.*?)<\/span>/gs;
 
     let match;
     while ((match = spanPattern.exec(htmlContent)) !== null) {
@@ -236,10 +237,7 @@ async function scrapeCountries(sport) {
       let leagues = [];
 
       // Find the next sibling div containing leagues
-      const nextDivIndex = htmlContent.indexOf(
-        '<div class="flex"',
-        match.index + 1
-      );
+      const nextDivIndex = htmlContent.indexOf('<div class="flex"', match.index + 1);
       if (nextDivIndex !== -1) {
         const endIndex = htmlContent.indexOf("</div>", nextDivIndex);
         const nextDiv = htmlContent.substring(nextDivIndex, endIndex);
@@ -247,17 +245,17 @@ async function scrapeCountries(sport) {
         if (leagueItems) {
           for (const item of leagueItems) {
             const labelMatch = item.match(/<a[^>]*?>(.*?)<\/a>/);
-            const label = labelMatch
-              ? labelMatch[1].replace(/\([^()]*\)/g, "").trim()
-              : null;
+            const label = labelMatch ? labelMatch[1].replace(/\([^()]*\)/g, "").trim() : null;
             const valueMatch = item.match(/<a.*?href="(.*?)"/);
-            const value = valueMatch ? valueMatch[1] : null;
-            leagues.push({ label, value });
+            const value = valueMatch ? `https://www.oddsportal.com${valueMatch[1]}` : null;
+            if (label && value) {
+              leagues.push({ label, value });
+            }
           }
         }
       }
 
-      countriesWithLeagues.push({ countryName, logoUrl, leagues });
+      countriesWithLeagues.push({ country: countryName, logoUrl, leagues });
     }
 
     return countriesWithLeagues;
@@ -273,151 +271,114 @@ app.get("/api/scrapeCountries", async (req, res) => {
     if (!sport) {
       throw new Error("Sport parameter is required");
     }
-    //console.time("scrapeCountries"); // Start the timer
+
     const data = await scrapeCountries(sport);
-    //console.timeEnd("scrapeCountries");
     res.json(data);
   } catch (error) {
     console.error("Error scraping countries:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-//////////////////////////////////////////////////////////
 
-//SCRAPE MATCHES
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 800; // 1 second
+//SCRAPE LEAGUES
+async function scrapeLeagues(url) {
+  try {
+    const response = await fetch(url);
+    const htmlContent = await response.text();
 
-const fetchWithTimeout = (url, options = {}, timeout = 50000) => {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeout)),
-  ]);
-};
+    const leaguesWithMatches = [];
+    const liPattern = /<li[^>]*>(.*?)<\/li>/gs;
 
-async function fetchWithRetries(url, options, timeout, retries, delay) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fetchWithTimeout(url, options, timeout);
-    } catch (error) {
-      if (i === retries - 1) {
-        throw error;
+    let match;
+    while ((match = liPattern.exec(htmlContent)) !== null) {
+      const liContent = match[1];
+      const spanMatch = liContent.match(/<span[^>]*>(.*?)<\/span>/);
+      const aMatch = liContent.match(/<a[^>]*href="(.*?)"[^>]*>(.*?)<\/a>/);
+      const spanText = spanMatch ? spanMatch[1].replace(/\([^()]*\)/g, "").trim() : null;
+      const aText = aMatch ? aMatch[2].replace(/\([^()]*\)/g, "").trim() : null;
+      const leagueUrl = aMatch ? `https://www.oddsportal.com${aMatch[1]}` : null;
+      const fullText = `${spanText} ${aText}`.trim();
+
+      if (fullText && leagueUrl) {
+        leaguesWithMatches.push({ label: fullText, value: leagueUrl });
       }
-      console.warn(`Retrying fetch... (${i + 1}/${retries})`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
     }
+
+    return leaguesWithMatches;
+  } catch (error) {
+    console.error("Error occurred while scraping:", error);
+    return [];
   }
 }
 
-const isValidJSON = (str) => {
+app.get("/api/scrapeLeagues", async (req, res) => {
   try {
-    JSON.parse(str);
-    return true;
+    const url = req.query.url;
+    if (!url) {
+      throw new Error("URL parameter is required");
+    }
+
+    const data = await scrapeLeagues(url);
+    res.json(data);
   } catch (error) {
-    return false;
+    console.error("Error scraping leagues:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-};
+});
 
-async function scrapeMatches(league) {
-  const matchesData = [];
-  const eventIDs = [];
-  const matchesOdds = {};
-
+//SCRAPE MATCHES
+async function scrapeMatches(url) {
   try {
-    const response = await fetchWithTimeout(league, {}, 10000); // 10 seconds timeout
+    const response = await fetch(url);
     const htmlContent = await response.text();
 
-    const divPattern = /<div class="min-h-\[86px\]">(.*?)<\/div>/gs;
-    let match;
+    const matches = [];
+    const tablePattern = /<table[^>]*class="table-main"[^>]*>(.*?)<\/table>/gs;
+    const tableMatch = tablePattern.exec(htmlContent);
 
-    while ((match = divPattern.exec(htmlContent)) !== null) {
-      const divContent = match[1];
-      const eventIDMatches = divContent.match(/encodeEventId&quot;:&quot;([^&]*)&quot;/g);
-      const oddsRequestMatches = divContent.match(/:odds-request="({.*?})"/);
+    if (tableMatch) {
+      const tableContent = tableMatch[1];
+      const rowPattern = /<tr[^>]*>(.*?)<\/tr>/gs;
 
-      if (eventIDMatches) {
-        for (const eventIDMatch of eventIDMatches) {
-          const eventID = eventIDMatch.match(/encodeEventId&quot;:&quot;([^&]*)&quot;/)[1];
-          eventIDs.push(eventID);
-        }
-      }
+      let rowMatch;
+      while ((rowMatch = rowPattern.exec(tableContent)) !== null) {
+        const rowContent = rowMatch[1];
+        const datePattern = /<td[^>]*class="table-time"[^>]*>(.*?)<\/td>/;
+        const teamPattern = /<td[^>]*class="name[^>]*>(.*?)<\/td>/;
+        const timeMatch = datePattern.exec(rowContent);
+        const teamsMatch = teamPattern.exec(rowContent);
 
-      if (oddsRequestMatches && oddsRequestMatches.length > 0) {
-        const oddsRequestString = oddsRequestMatches[1].replace(/&quot;/g, '"');
-        if (isValidJSON(oddsRequestString)) {
-          const oddsRequestObject = JSON.parse(oddsRequestString);
-          const oddsRequestEndpoint = oddsRequestObject.url;
-          const oddsRequestURL = "https://www.oddsportal.com" + oddsRequestEndpoint;
-
-          const responseOdds = await fetchWithRetries(oddsRequestURL, {}, 10000, MAX_RETRIES, RETRY_DELAY);
-          if (responseOdds.ok) {
-            const oddsContent = await responseOdds.text();
-            Object.assign(matchesOdds, JSON.parse(oddsContent).d.oddsData);
-          } else {
-            console.error("Failed to fetch odds data:", responseOdds.status, responseOdds.statusText);
-          }
-        } else {
-          console.error("Invalid JSON in odds request string:", oddsRequestString);
+        if (timeMatch && teamsMatch) {
+          const time = timeMatch[1].trim();
+          const teams = teamsMatch[1].replace(/<\/?[^>]+(>|$)/g, "").trim();
+          matches.push({ time, teams });
         }
       }
     }
 
-    await Promise.all(eventIDs.map(async (eventID) => {
-      const matchData = {};
-      const matchOdds = matchesOdds[eventID] ? matchesOdds[eventID].odds : [];
-      const href = league + eventID;
-      matchData.href = href;
-
-      try {
-        const response = await fetchWithRetries(href, {}, 10000, MAX_RETRIES, RETRY_DELAY);
-        if (!response.ok) throw new Error("Failed to fetch page source");
-        const htmlContent = await response.text();
-
-        const startStartDateIndex = htmlContent.indexOf("startDate&quot;:") + "startDate&quot;:".length;
-        const endStartDateIndex = htmlContent.indexOf(",", startStartDateIndex);
-        if (startStartDateIndex !== -1 && endStartDateIndex !== -1) {
-          const startDate = htmlContent.slice(startStartDateIndex, endStartDateIndex);
-          matchData.startDateTimestamp = startDate;
-        } else {
-          console.log("Could not find startDate");
-        }
-
-        const startScriptIndex = htmlContent.indexOf('<script type="application/ld+json">') + '<script type="application/ld+json">'.length;
-        const endScriptIndex = htmlContent.indexOf("</script>", startScriptIndex);
-        const jsonLDContent = htmlContent.slice(startScriptIndex, endScriptIndex);
-        const eventData = JSON.parse(jsonLDContent);
-
-        matchData.homeTeamName = eventData.homeTeam.name;
-        matchData.homeTeamLogo = eventData.homeTeam.image;
-        matchData.awayTeamName = eventData.awayTeam.name;
-        matchData.awayTeamLogo = eventData.awayTeam.image;
-        matchData.eventStatus = eventData.eventStatus;
-        matchData.odds = matchOdds.map((oddsItem) => oddsItem.avgOdds);
-      } catch (error) {
-        console.error("Error fetching page source:", error);
-      }
-
-      matchesData.push(matchData);
-    }));
-
-    return matchesData;
+    return matches;
   } catch (error) {
-    console.error("Error scraping matches:", error);
+    console.error("Error occurred while scraping:", error);
     return [];
   }
 }
 
 app.get("/api/scrapeMatches", async (req, res) => {
   try {
-    const league = req.query.league;
-    if (!league) throw new Error("league parameter is required");
-    const data = await scrapeMatches(league);
+    const url = req.query.url;
+    if (!url) {
+      throw new Error("URL parameter is required");
+    }
+
+    const data = await scrapeMatches(url);
     res.json(data);
   } catch (error) {
     console.error("Error scraping matches:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
+
 
 //////////////////////////////////////////////////////////
 
