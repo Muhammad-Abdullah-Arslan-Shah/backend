@@ -274,171 +274,13 @@ app.get("/api/scrapeCountries", async (req, res) => {
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
-async function scrapeMatches(league) {
-  const matchesData = [];
+const fetchWithTimeout = (url, options = {}, timeout = 5000) => {
+  return Promise.race([
+    fetch(url, options),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeout)),
+  ]);
+};
 
-  try {
-    const response = await fetchWithTimeout(league, {}, 10000); // 10 seconds timeout
-    const htmlContent = await response.text();
-
-    const eventIDs = [];
-    let matchesOdds;
-    const divPattern = /<div class="min-h-\[86px\]">(.*?)<\/div>/gs;
-    let match;
-
-    while ((match = divPattern.exec(htmlContent)) !== null) {
-      const divContent = match[1];
-      const eventIDMatches = divContent.match(
-        /encodeEventId&quot;:&quot;([^&]*)&quot;/g
-      );
-      const oddsRequestMatches = divContent.match(/:odds-request="({.*?})"/);
-
-      if (eventIDMatches) {
-        for (const eventIDMatch of eventIDMatches) {
-          const eventID = eventIDMatch.match(
-            /encodeEventId&quot;:&quot;([^&]*)&quot;/
-          )[1];
-          eventIDs.push(eventID);
-        }
-      }
-      if (oddsRequestMatches && oddsRequestMatches.length > 0) {
-        // Extract the matched odds request string
-        const oddsRequestString = oddsRequestMatches[1].replace(/&quot;/g, '"');
-        // Validate if the oddsRequestString is valid JSON before parsing
-        if (isValidJSON(oddsRequestString)) {
-          const oddsRequestObject = JSON.parse(oddsRequestString);
-          // Get the URL from the odds request object
-          const oddsRequestEndpoint = oddsRequestObject.url;
-
-          const oddsRequestURL =
-            "https://www.oddsportal.com" + oddsRequestEndpoint;
-
-          // Fetch the content from the URL with retries
-          const responseOdds = await fetchWithRetries(
-            oddsRequestURL,
-            {},
-            10000,
-            MAX_RETRIES,
-            RETRY_DELAY
-          );
-
-          // Check if the request was successful
-          if (responseOdds.ok) {
-            const oddsContent = await responseOdds.text();
-            matchesOdds = JSON.parse(oddsContent); // Define oddsData here
-          } else {
-            console.error(
-              "Failed to fetch odds data:",
-              responseOdds.status,
-              responseOdds.statusText
-            );
-          }
-        } else {
-          console.error(
-            "Invalid JSON in odds request string:",
-            oddsRequestString
-          );
-        }
-      } else {
-        console.log("No :odds-request attribute found.");
-      }
-    }
-
-    // Fetch and process each match concurrently
-    await Promise.all(
-      eventIDs.map(async (eventID) => {
-        const matchData = {};
-        const matchOdds = matchesOdds.d.oddsData[eventID].odds;
-        const href = league + eventID;
-        matchData.href = href;
-
-        try {
-          // Make a GET request to fetch the raw HTML source code of the webpage with retries
-          const response = await fetchWithRetries(
-            href,
-            {},
-            10000,
-            MAX_RETRIES,
-            RETRY_DELAY
-          );
-
-          if (!response.ok) {
-            throw new Error("Failed to fetch page source");
-          }
-          // Extract the HTML content from the response
-          const htmlContent = await response.text();
-
-          // Find the index of the start and end of the startDate
-          const startStartDateIndex =
-            htmlContent.indexOf("startDate&quot;:") + "startDate&quot;:".length;
-          const endStartDateIndex = htmlContent.indexOf(
-            ",",
-            startStartDateIndex
-          );
-
-          // Check if the startDate was found
-          if (startStartDateIndex !== -1 && endStartDateIndex !== -1) {
-            // Extract the startDate
-            const startDate = htmlContent.slice(
-              startStartDateIndex,
-              endStartDateIndex
-            );
-            matchData.startDateTimestamp = startDate;
-          } else {
-            console.log("Could not find startDate");
-          }
-
-          // Find the start and end index of the script containing JSON LD data
-          const startScriptIndex =
-            htmlContent.indexOf('<script type="application/ld+json">') +
-            '<script type="application/ld+json">'.length;
-          const endScriptIndex = htmlContent.indexOf(
-            "</script>",
-            startScriptIndex
-          );
-
-          // Extract the JSON LD data
-          const jsonLDContent = htmlContent.slice(
-            startScriptIndex,
-            endScriptIndex
-          );
-
-          // Parse the JSON LD data
-          const eventData = JSON.parse(jsonLDContent);
-
-          matchData.homeTeamName = eventData.homeTeam.name;
-          matchData.homeTeamLogo = eventData.homeTeam.image;
-          matchData.awayTeamName = eventData.awayTeam.name;
-          matchData.awayTeamLogo = eventData.awayTeam.image;
-          matchData.eventStatus = eventData.eventStatus;
-          matchData.odds = matchOdds.map((oddsItem) => oddsItem.avgOdds);
-        } catch (error) {
-          console.error("Error fetching page source:", error);
-        }
-
-        // Push the match data to the array
-        matchesData.push(matchData);
-      })
-    );
-
-    return matchesData;
-  } catch (error) {
-    console.error("Error scraping matches:", error);
-    return [];
-  }
-}
-
-// Helper function to validate JSON
-function isValidJSON(str) {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-// Helper function to perform fetch with retries
 async function fetchWithRetries(url, options, timeout, retries, delay) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -453,30 +295,116 @@ async function fetchWithRetries(url, options, timeout, retries, delay) {
   }
 }
 
-const fetchWithTimeout = (url, options = {}, timeout = 5000) => {
-  return Promise.race([
-    fetch(url, options),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("Request timed out")), timeout)
-    ),
-  ]);
+const isValidJSON = (str) => {
+  try {
+    JSON.parse(str);
+    return true;
+  } catch (error) {
+    return false;
+  }
 };
+
+async function scrapeMatches(league) {
+  const matchesData = [];
+  const eventIDs = [];
+  const matchesOdds = {};
+
+  try {
+    const response = await fetchWithTimeout(league, {}, 10000); // 10 seconds timeout
+    const htmlContent = await response.text();
+
+    const divPattern = /<div class="min-h-\[86px\]">(.*?)<\/div>/gs;
+    let match;
+
+    while ((match = divPattern.exec(htmlContent)) !== null) {
+      const divContent = match[1];
+      const eventIDMatches = divContent.match(/encodeEventId&quot;:&quot;([^&]*)&quot;/g);
+      const oddsRequestMatches = divContent.match(/:odds-request="({.*?})"/);
+
+      if (eventIDMatches) {
+        for (const eventIDMatch of eventIDMatches) {
+          const eventID = eventIDMatch.match(/encodeEventId&quot;:&quot;([^&]*)&quot;/)[1];
+          eventIDs.push(eventID);
+        }
+      }
+
+      if (oddsRequestMatches && oddsRequestMatches.length > 0) {
+        const oddsRequestString = oddsRequestMatches[1].replace(/&quot;/g, '"');
+        if (isValidJSON(oddsRequestString)) {
+          const oddsRequestObject = JSON.parse(oddsRequestString);
+          const oddsRequestEndpoint = oddsRequestObject.url;
+          const oddsRequestURL = "https://www.oddsportal.com" + oddsRequestEndpoint;
+
+          const responseOdds = await fetchWithRetries(oddsRequestURL, {}, 10000, MAX_RETRIES, RETRY_DELAY);
+          if (responseOdds.ok) {
+            const oddsContent = await responseOdds.text();
+            Object.assign(matchesOdds, JSON.parse(oddsContent).d.oddsData);
+          } else {
+            console.error("Failed to fetch odds data:", responseOdds.status, responseOdds.statusText);
+          }
+        } else {
+          console.error("Invalid JSON in odds request string:", oddsRequestString);
+        }
+      }
+    }
+
+    await Promise.all(eventIDs.map(async (eventID) => {
+      const matchData = {};
+      const matchOdds = matchesOdds[eventID] ? matchesOdds[eventID].odds : [];
+      const href = league + eventID;
+      matchData.href = href;
+
+      try {
+        const response = await fetchWithRetries(href, {}, 10000, MAX_RETRIES, RETRY_DELAY);
+        if (!response.ok) throw new Error("Failed to fetch page source");
+        const htmlContent = await response.text();
+
+        const startStartDateIndex = htmlContent.indexOf("startDate&quot;:") + "startDate&quot;:".length;
+        const endStartDateIndex = htmlContent.indexOf(",", startStartDateIndex);
+        if (startStartDateIndex !== -1 && endStartDateIndex !== -1) {
+          const startDate = htmlContent.slice(startStartDateIndex, endStartDateIndex);
+          matchData.startDateTimestamp = startDate;
+        } else {
+          console.log("Could not find startDate");
+        }
+
+        const startScriptIndex = htmlContent.indexOf('<script type="application/ld+json">') + '<script type="application/ld+json">'.length;
+        const endScriptIndex = htmlContent.indexOf("</script>", startScriptIndex);
+        const jsonLDContent = htmlContent.slice(startScriptIndex, endScriptIndex);
+        const eventData = JSON.parse(jsonLDContent);
+
+        matchData.homeTeamName = eventData.homeTeam.name;
+        matchData.homeTeamLogo = eventData.homeTeam.image;
+        matchData.awayTeamName = eventData.awayTeam.name;
+        matchData.awayTeamLogo = eventData.awayTeam.image;
+        matchData.eventStatus = eventData.eventStatus;
+        matchData.odds = matchOdds.map((oddsItem) => oddsItem.avgOdds);
+      } catch (error) {
+        console.error("Error fetching page source:", error);
+      }
+
+      matchesData.push(matchData);
+    }));
+
+    return matchesData;
+  } catch (error) {
+    console.error("Error scraping matches:", error);
+    return [];
+  }
+}
 
 app.get("/api/scrapeMatches", async (req, res) => {
   try {
     const league = req.query.league;
-    if (!league) {
-      throw new Error("league parameter is required");
-    }
-    //console.time("scrapeMatches");
+    if (!league) throw new Error("league parameter is required");
     const data = await scrapeMatches(league);
-    //console.timeEnd("scrapeMatches");
     res.json(data);
   } catch (error) {
     console.error("Error scraping matches:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 //////////////////////////////////////////////////////////
 
 function extractSportNameFromUrl(url) {
