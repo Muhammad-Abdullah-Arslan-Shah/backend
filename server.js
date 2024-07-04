@@ -286,9 +286,9 @@ app.get("/api/scrapeCountries", async (req, res) => {
 
 //SCRAPE MATCHES
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const RETRY_DELAY = 800; // 1 second
 
-const fetchWithTimeout = (url, options = {}, timeout = 5000) => {
+const fetchWithTimeout = (url, options = {}, timeout = 50000) => {
   return Promise.race([
     fetch(url, options),
     new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeout)),
