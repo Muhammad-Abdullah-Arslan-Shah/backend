@@ -1,7 +1,7 @@
 {
   "functions": {
     "server.js": {
-      "runtime": "vercel-nodejs@18.x", // specify Node.js runtime version
+      "runtime": "vercel-nodejs@18.x", 
       "maxDuration": 60
     }
   },
