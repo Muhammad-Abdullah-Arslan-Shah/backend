@@ -283,7 +283,7 @@ async function scrapeMatches(league) {
 
     const eventIDs = [];
     let matchesOdds;
-    const divPattern = /<div class="min-h-\[86px\]">(.*?)<\/div>/gs;
+    const divPattern = /<div class="min-h-\[206px\]">(.*?)<\/div>/gs;
     let match;
 
     while ((match = divPattern.exec(htmlContent)) !== null) {
